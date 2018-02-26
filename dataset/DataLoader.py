@@ -27,6 +27,8 @@ from PIL import Image # import jpg in python
 from skimage.io import imread_collection, imread, concatenate_images # import all images from a folder, see the dataloader
 
 
+
+
 #%%
 
 # Load the list of all videos
@@ -62,9 +64,9 @@ def draw_gt(im, coords):
     Ys = coords[1::2] # Save Ycoords
     for i in range(4):
         if i < 3:
-            plt.plot([Xs.iloc[i],Xs.iloc[i+1]],[Ys.iloc[i],Ys.iloc[i+1]],'k-', color = 'r',lw=1)
+            plt.plot([Xs[i],Xs[i+1]],[Ys[i],Ys[i+1]],'k-', color = 'r',lw=1)
         elif i == 3:
-            plt.plot([Xs.iloc[i],Xs.iloc[0]],[Ys.iloc[i],Ys.iloc[0]],'k-', color ='r', lw=1)
+            plt.plot([Xs[i],Xs[0]],[Ys[i],Ys[0]],'k-', color ='r', lw=1)
     plt.show()
 
 
@@ -74,6 +76,8 @@ def draw_gt(im, coords):
 
 
 #%% Dataset class
+    
+'''Output is the imagesequence in an np.array format and the gt aswell.'''
 
 class VOT2017_dataset():
     """This is the VOT2017 dataset"""
@@ -105,7 +109,14 @@ class VOT2017_dataset():
                                       'groundtruth.txt'), header = None)
         
         im_seq = imread_collection(vid_name_path)
-        sample = {'Video': im_seq, 'gt': gt}
+        
+        # Image collection to np.array
+        images = concatenate_images(im_seq) # Shape(Nr. of images, h, w, RGB)
+        
+        # Also convert the gt to np.array
+        gt = gt.values
+        
+        sample = {'Video': images, 'gt': gt}
         
         # Cant tell yet what this is for
         if self.transform:
@@ -122,7 +133,7 @@ test = VOT2017_dataset(csv_file= 'F:/vot2017/list.txt',
 sample = test[2]
 
 # Simply draw a single video - here the idx refers to the image in the sequence
-draw_gt(sample['Video'][0], sample['gt'].iloc[0])
+draw_gt(sample['Video'][0], sample['gt'][0])
 
 
 #%% Just for information - Find the smallest sized video
@@ -143,11 +154,6 @@ for i in range(Vids):
 plt.hist(Size)
 
 
-
-#%% Test rescaling 
-
-test = concatenate_images(sample['Video'])
-t_test = transform.resize(test[0,:,:,:], (256,256))
 
 
 #%% Transforms - Rescale/Resize
@@ -173,8 +179,8 @@ class Rescale(object):
     def __call__(self, sample):
         # Split the sample in video and gt
         images, gt = sample['Video'], sample['gt']
-        nr = len(sample['Video']) # Save the amount of images to iterate over
-        images = concatenate_images(images) # Shape(Nr. of images, h, w, RGB)
+        nr = len(images) # Save the amount of images to iterate over
+        print(nr)
         # Save heigth and width of video
         h, w = images.shape[1:3] # heigth and width are the 2nd and 3rd entry
         
@@ -193,39 +199,28 @@ class Rescale(object):
         gt_new = gt*np.array((new_w/w, new_h/h, new_w/w,new_h/h, new_w/w,new_h/h, new_w/w, new_h/h))
         
         return {'Video': img, 'gt': gt_new}
-    
+
+
+
 #%% Test rescaling
         
 scale = Rescale((220,280))
 
 
 transformed_sample = scale(sample)
-# Dman this fkcing iloc ... have the gt in df any advantage to array?
-draw_gt(transformed_sample['Video'][100], transformed_sample['gt'].iloc[100])
+draw_gt(transformed_sample['Video'][100], transformed_sample['gt'][100])
 
 # Check
 
 #%% Transforms - ToTensor
 
 # Transform the loaded image collection to Tensors
-# Atm maybe in conflict with the rescale class as there the image collection
-# is transformed to an array
-# Probably should rewrite the 'rescale' classe so that it is given the array
-# and we transform the image collection(needed in the loading process)
-# immediately into arrays
-# Same goes for the gt which affects also the draw fct, data-class, transforms
 
-# However so far lets take the ToTensor class that it receives an image collectio
 class ToTensor(object):
-    '''Convert and image collection to a np.array and then to tensor'''
+    '''Convert sample to tensor'''
     def __call__(self, sample):
         # Load the sample and split it
         images, gt = sample['Video'], sample['gt']
-        # Image collection to np.array
-        images = concatenate_images(images) # Shape(Nr. of images, h, w, RGB)
-        
-        # Also convert the gt to np.array
-        gt = gt.values
         
         # swap color axis because
         # numpy image: H x W x C
@@ -241,4 +236,4 @@ class ToTensor(object):
 tens = ToTensor()
 tens(sample)
 
-# Apparently not enoguh RAM on my machine here to fully check that it works :D
+# Still have to test this
