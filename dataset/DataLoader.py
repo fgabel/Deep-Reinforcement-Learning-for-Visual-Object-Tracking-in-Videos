@@ -17,6 +17,7 @@ from torch.optim import lr_scheduler
 from torch.autograd import Variable
 from skimage import io, transform
 import torchvision
+from torch.utils.data import Dataset
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches
@@ -79,7 +80,7 @@ def draw_gt(im, coords):
     
 '''Output is the imagesequence in an np.array format and the gt aswell.'''
 
-class VOT2017_dataset():
+class VOT2017_dataset(Dataset):
     """This is the VOT2017 dataset"""
     def __init__(self, csv_file, root_dir, transform = None):
         """ Arguments:
