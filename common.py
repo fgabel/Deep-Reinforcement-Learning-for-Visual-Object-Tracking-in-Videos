@@ -8,6 +8,7 @@ RESULTS_DIR = ROOT_DIR + '/results'
 
 ##---------------------------------------------------------------------
 import os
+import copy
 from datetime import datetime
 PROJECT_PATH = os.path.dirname(os.path.realpath(__file__))
 IDENTIFIER   = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -17,6 +18,7 @@ import math
 import numpy as np
 import random
 import PIL
+from PIL import Image # import jpg in python
 import cv2
 
 import matplotlib
@@ -32,11 +34,15 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import *
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import torch.optim as optim
+from torch.optim import lr_scheduler
 from torch.nn.parallel.data_parallel import data_parallel
+from torch.utils.data import Dataset
+import torchvision
 
 
 # std libs
@@ -45,6 +51,9 @@ import numbers
 import inspect
 import shutil
 from timeit import default_timer as timer
+from __future__ import print_function, division
+
+
 
 import csv
 import pandas as pd
@@ -57,7 +66,12 @@ import matplotlib.pyplot as plt
 
 import skimage
 import skimage.color
+from skimage import io, transform
+# import all images from a folder, see the dataloader
+from skimage.io import imread_collection, imread, concatenate_images 
 from scipy import ndimage
+
+
 
 
 #---------------------------------------------------------------------------------
