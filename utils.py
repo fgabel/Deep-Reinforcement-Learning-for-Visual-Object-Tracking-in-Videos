@@ -179,7 +179,57 @@ for i in range(Vids):
 
 # Smallest size ist 320 x240
 
+
+
+#%% define loss/reward functions; given x,y,w,h
+
+def loss_v1(pred, gt):
+    r = - np.mean(np.absolute(pred-gt)) - np.max(np.absolute(pred-gt))
+    return r
+
+
+# Define a class rectangle to make things easier
+class rectangle():
+    '''coordinates is x,y,w,h'''
+    def __init__(self, coord):
+        self.left = coord[0]
+        self.right = coord[0] + coord[2]
+        self.top = coord[1]
+        self.bottom = coord[1] + coord[3]
+        self.x = coord[0]
+        self.y = coord[1]
+        self.width = coord[2]
+        self.height = coord[3]
+        self.area = self.width * self.height
+
+# Calculate the reward
+def loss_v2(pred, gt):
+    # Define the rectangles
+    r_pred = rectangle(pred)
+    r_gt   = rectangle(gt)
     
+    # Calculate the overlap area
+    x_overlap = np.max((0, np.min((r_pred.right, r_gt.right)) - np.max((r_pred.left, r_gt.left))))
+    y_overlap = np.max((0, np.min((r_pred.bottom, r_gt.bottom)) - np.max((r_pred.top, r_gt.top))))
+    overlap_area = x_overlap * y_overlap
+    
+    # Calculate the total_area
+    total_area = r_pred.area + r_gt.area - overlap_area
+    
+    # Calculate the reward
+    r = np.absolute(overlap_area)/np.absolute(total_area)
+    
+    return r
+#%% Test reward functions
+    
+test_1 = np.array((0,0,10,10))
+test_2 = np.array((5,5,10,10))
+
+print(loss_v1(test_1, test_2))
+print(loss_v2(test_1, test_2))
+
+    
+
 #%%
 
 #data reader  ----------------------------------------------------------------
