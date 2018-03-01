@@ -4,8 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import init
-# python 3 confusing imports :(
-from .unet_parts import *
 
 
 
