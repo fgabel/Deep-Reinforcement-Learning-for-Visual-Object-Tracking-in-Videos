@@ -3,6 +3,23 @@
 
 from common import *
 
+#%% Recalculate x,y,w,h to the four corner coordinates
+    
+def calc_coords(gt_wh):
+    gt_new = np.zeros((gt_wh.shape[0],8))
+    print(gt_new.shape)
+    print(gt_wh.shape)
+    print(gt_wh[:,0])
+    gt_new[:,0] = gt_wh[:,0]                # x1
+    gt_new[:,1] = gt_wh[:,1]                # y1
+    gt_new[:,2] = gt_wh[:,0] + gt_wh[:,2]   # x2
+    gt_new[:,3] = gt_wh[:,1]                # y2
+    gt_new[:,4] = gt_wh[:,0] + gt_wh[:,2]   # x3
+    gt_new[:,5] = gt_wh[:,1] + gt_wh[:,3]   # y3  
+    gt_new[:,6] = gt_wh[:,0]                # x4
+    gt_new[:,7] = gt_wh[:,1] + gt_wh[:,3]   # y4
+    
+    return gt_new
 #%% Dataset class
     
 '''Output is the imagesequence in an np.array format and the gt aswell.'''
@@ -43,6 +60,10 @@ class VOT2017_dataset(Dataset):
         
         # Also convert the gt to np.array
         gt = gt.values
+        
+        if gt.shape[1] == 4:
+            gt = calc_coords(gt)
+            
         
         sample = {'Video': images, 'gt': gt}
         
@@ -97,7 +118,7 @@ class Rescale(object):
         images, gt = sample['Video'], sample['gt']
         nr = len(images) # Save the amount of images to iterate over
         print(nr)
-        # Save heigth and width of video
+        # Save heigth and widthim of video
         h, w = images.shape[1:3] # heigth and width are the 2nd and 3rd entry
         
         new_h, new_w = self.output_size
@@ -179,56 +200,33 @@ for i in range(Vids):
 
 # Smallest size ist 320 x240
 
+#%% define loss/reward functions; given the coordinates of all corners
 
-
-#%% define loss/reward functions; given x,y,w,h
-
-def loss_v1(pred, gt):
+def reward_v1(pred, gt):
     r = - np.mean(np.absolute(pred-gt)) - np.max(np.absolute(pred-gt))
     return r
 
 
-# Define a class rectangle to make things easier
-class rectangle():
-    '''coordinates is x,y,w,h'''
-    def __init__(self, coord):
-        self.left = coord[0]
-        self.right = coord[0] + coord[2]
-        self.top = coord[1]
-        self.bottom = coord[1] + coord[3]
-        self.x = coord[0]
-        self.y = coord[1]
-        self.width = coord[2]
-        self.height = coord[3]
-        self.area = self.width * self.height
-
-# Calculate the reward
-def loss_v2(pred, gt):
-    # Define the rectangles
-    r_pred = rectangle(pred)
-    r_gt   = rectangle(gt)
+# Calculate the reward given all the for corners x1,y1,x2,y2,x3,y3,x4,y4
+def reward_v2(pred, gt):
+    #reorder the coord in tuples for the polygon
+    pred_re = [(pred[0],pred[1]),(pred[2],pred[3]), (pred[4],pred[5]),(pred[6],pred[7])]
+    gt_re   = [(gt[0],gt[1]),(gt[2],gt[3]),(gt[4],gt[5]),(gt[6],gt[7])]
     
-    # Calculate the overlap area
-    x_overlap = np.max((0, np.min((r_pred.right, r_gt.right)) - np.max((r_pred.left, r_gt.left))))
-    y_overlap = np.max((0, np.min((r_pred.bottom, r_gt.bottom)) - np.max((r_pred.top, r_gt.top))))
-    overlap_area = x_overlap * y_overlap
-    
-    # Calculate the total_area
-    total_area = r_pred.area + r_gt.area - overlap_area
-    
-    # Calculate the reward
-    r = np.absolute(overlap_area)/np.absolute(total_area)
-    
+    pred_poly = Polygon(pred_re)
+    gt_poly = Polygon(gt_re)
+    # Reward == Intersection/total area
+    r = pred_poly.intersection(gt_poly).area/(pred_poly.area + gt_poly.area - pred_poly.intersection(gt_poly).area)
     return r
+
 #%% Test reward functions
     
-test_1 = np.array((0,0,10,10))
-test_2 = np.array((5,5,10,10))
+test_1 = np.array((0,0,0,1,1,1,1,0))
+test_2 = np.array((0.5,0,0.5,1,1.5,1,1.5,0))
 
-print(loss_v1(test_1, test_2))
-print(loss_v2(test_1, test_2))
+print(reward_v1(test_1, test_2))
+print(reward_v2(test_1, test_2))
 
-    
 
 #%%
 

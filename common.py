@@ -70,7 +70,7 @@ from skimage import io, transform
 # import all images from a folder, see the dataloader
 from skimage.io import imread_collection, imread, concatenate_images 
 from scipy import ndimage
-
+from shapely.geometry import Polygon # for the Polygon
 
 
 
