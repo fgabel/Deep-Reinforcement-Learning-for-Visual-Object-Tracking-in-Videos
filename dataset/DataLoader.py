@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 """
 Created on Sun Feb 18 13:44:42 2018
@@ -62,6 +61,7 @@ def draw_gt(im, coords):
             coords = coords of all corners as in ground truth files(u.l,u.r,l.r,l.l)(u=upper,l = lower)
         """
     plt.imshow(im)
+    
     Xs = coords[::2] # Save Xcoords
     Ys = coords[1::2] # Save Ycoords
     for i in range(4):
@@ -75,8 +75,23 @@ def draw_gt(im, coords):
 #draw_gt(im, gt.iloc[91])
 #Check
 
-
-
+#%% Recalculate x,y,w,h to the four corner coordinates
+    
+def calc_coords(gt_wh):
+    gt_new = np.zeros((gt_wh.shape[0],8))
+    print(gt_new.shape)
+    print(gt_wh.shape)
+    print(gt_wh[:,0])
+    gt_new[:,0] = gt_wh[:,0]                # x1
+    gt_new[:,1] = gt_wh[:,1]                # y1
+    gt_new[:,2] = gt_wh[:,0] + gt_wh[:,2]   # x2
+    gt_new[:,3] = gt_wh[:,1]                # y2
+    gt_new[:,4] = gt_wh[:,0] + gt_wh[:,2]   # x3
+    gt_new[:,5] = gt_wh[:,1] + gt_wh[:,3]   # y3  
+    gt_new[:,6] = gt_wh[:,0]                # x4
+    gt_new[:,7] = gt_wh[:,1] + gt_wh[:,3]   # y4
+    
+    return gt_new
 #%% Dataset class
     
 '''Output is the imagesequence in an np.array format and the gt aswell.'''
@@ -118,6 +133,10 @@ class VOT2017_dataset(Dataset):
         # Also convert the gt to np.array
         gt = gt.values
         
+        if gt.shape[1] == 4:
+            gt = calc_coords(gt)
+            
+        
         sample = {'Video': images, 'gt': gt}
         
         # Cant tell yet what this is for
@@ -132,7 +151,7 @@ test = VOT2017_dataset(csv_file= 'F:/vot2017/list.txt',
                        root_dir= 'F:/vot2017/')  
 
 # E.g. load the second video of the vid_list
-sample = test[2]
+sample = test[14]
 
 # Simply draw a single video - here the idx refers to the image in the sequence
 draw_gt(sample['Video'][0], sample['gt'][0])
