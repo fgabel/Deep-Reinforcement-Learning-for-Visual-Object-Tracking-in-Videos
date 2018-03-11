@@ -2,8 +2,8 @@ from common import *
 from utils import *
 
 # ------------------------------------------------------------------------------------
-from model import net
-
+from model import DLRTnet
+from utils import VOT2017Dataset
 
 def train_augment(image, multi_mask, index):
     pass
@@ -251,7 +251,7 @@ def run_train():
 
 
     for i in range(n_epochs):  # loop over the dataset multiple times
-        sum_train_loss = np.zeros(6,np.float32)
+        sum_train_loss = np.zeros(6, np.float32)
         sum_train_acc  = 0.0
         sum = 0
 
@@ -363,6 +363,56 @@ def run_train():
         }, out_dir +'/checkpoint/%d_optimizer.pth'%(i))
 
     log.write('\n')
+
+def train(model, criterion, optimizer, n_epochs, T):
+    # Train the Model
+    vot_data = VOT2017_dataset(csv_file= 'F:/vot2017/list.txt',
+                       root_dir= 'F:/vot2017/')  
+    train_loader = dataloader(vot_data) # iterating over this gives videos
+    for vid in train_loader:
+        for image in vid[...]:
+            
+    for epoch in range(n_epochs):
+        
+        for i, video in enumerate(train_loader):
+            # video is now a dict of video, gt pairs
+            image_stack = video['video'] # shape(Nr. of images, h, w, RGB)
+            masks = video['gt']
+            current_pos_of_t = 0 # start from the start of the video
+            for t in range(T):
+                """we take a T-image sequence out of the video"""     
+                if current_pos_of_t + T > image_stack.shape[0]:
+                    """This loop makes sure that we dont get an index error. Handling the edges like this is not so nice though"""
+                    continue
+                image_stack_temp = image_stack[current_pos_of_t: current_pos_of_t + T, :, :, :]
+                masks_temp = masks[current_pos_of_t: current_pos_of_t + T, :, :] # check FORMATS!
+                current_pos_of_t += T # next iteration, take the next T-image sequence
+                reward_list = []
+                for image, mask in zip(image_stack_temp, masks_temp): 
+                    """ iterate over the first dimensionof image_stack_temp, the number of images
+                        image is now a particular image of the sequence, mask its corresonding mask
+                    """
+                    image = Variable(mask.view(-1, sequence_length, input_size))
+                    mask = Variable(mask)
+                
+                    # Forward + Backward + Optimize
+                    optimizer.zero_grad() # reset gradients
+                    outputs = DLRTnet(images) # observation network
+                    out, hidden = LSTM(outputs, hidden) # LSTM gets the output of DLRTnet as input and its previous hidden state
+                    """GaussianLayer takes a hidden layer and samples N masks from the last 4 / 8 numbers"""
+                    l_t = GaussianLayer(hidden) # l_t contains N sampled masks
+                    
+                    for mask_ in l_t:
+                        reward += LOSSFUNCTION(l_t, mask) # take the loss function 1 from the paper and 
+                    reward_list.append(reward) # this list contains r1, r2, r3, ..., rT
+                    
+                loss.backward() # Crucial step here is to implement backward pass of GaussianLayer using reward_list
+                optimizer.step()
+                
+                if (i+1) % 100 == 0:
+                    print ('Epoch [%d/%d], Step [%d/%d], Loss: %.4f' 
+                           %(epoch+1, num_epochs, i+1, len(train_dataset)//batch_size, loss.data[0]))
+
 
 
 
