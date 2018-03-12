@@ -388,6 +388,7 @@ def train(model, criterion, optimizer, n_epochs, T):
                 masks_temp = masks[current_pos_of_t: current_pos_of_t + T, :, :] # check FORMATS!
                 current_pos_of_t += T # next iteration, take the next T-image sequence
                 reward_list = []
+                b_t_list = []
                 for image, mask in zip(image_stack_temp, masks_temp): 
                     """ iterate over the first dimensionof image_stack_temp, the number of images
                         image is now a particular image of the sequence, mask its corresonding mask
@@ -405,6 +406,13 @@ def train(model, criterion, optimizer, n_epochs, T):
                     for mask_ in l_t:
                         reward += LOSSFUNCTION(l_t, mask) # take the loss function 1 from the paper and 
                     reward_list.append(reward) # this list contains r1, r2, r3, ..., rT
+                    b_t_list.append(1/N*reward) # this contains b1, b2, ... bT
+                
+                
+                # Compute gradient
+                image_reward = np.asarray(reward_list)
+                image_base = np.asarray(b_t_list)
+                    
                     
                 loss.backward() # Crucial step here is to implement backward pass of GaussianLayer using reward_list
                 optimizer.step()
