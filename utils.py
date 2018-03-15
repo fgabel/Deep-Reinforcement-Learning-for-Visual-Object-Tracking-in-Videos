@@ -230,6 +230,54 @@ print(reward_v2(test_1, test_2))
 
 #%%
 
+class GaussianLayer(torch.autograd.Function):
+    '''Implement custom gaussian layer here'''
+    
+    
+    @staticmethod
+    def forward(self, inp, sigma, N):
+        '''
+        We receive a Tensor input(take last 8 nr) from that we will draw outputs from a gaussian 
+        distribution, centered around our inputs, with sigma as a covariance matrix
+        N is the samples we draw
+        '''
+        cov = np.identity(8)*sigma # Covariance matrix
+        output = np.random.multivariate_normal(inp[-8,:], cov, N) #sample form gaussian
+        output = torch.from_numpy(output) # to tensor
+        return output
+    
+    @staticmethod
+    def backward(self, grad):
+        '''
+        Given grad as a tensor(8 values)
+        '''
+        self.grad = grad
+        return grad
+    
+    
+#%%
+    
+def calc_grad(pred_l, output, R_t, b_t, N, sigma):
+      '''
+      We receive pred_l(8xNxT) 
+      also we receive our baseline b_t(T) and the cumulative rewards R_t(NxT)
+      therefore we can compute the gradient as
+      '''
+      b_t.reshape((N,1)) # as is a vector we want column difference
+      output.reshape((8,1)) # We want to have it as a column
+      diff = R_t - b_t # is NxT
+      ln_pi = np.zeros(pred_l.shape)
+      # apperently have to use a for loop
+      for i in range(N):
+          ln_pi = pred_l-output/sigma**2 
+      product = ln_pi*diff # 8xNxT
+      grad_G = 1/N*np.sum(np.sum(product)) # Sum that up
+      grad_G = torch.from_numpy(grad_G) # To torch
+      return grad_G
+      
+
+#%%
+
 #data reader  ----------------------------------------------------------------
 class XXXXXDataset(Dataset):
 
